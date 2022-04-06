@@ -1,7 +1,7 @@
 version: '2'
 services:
     solr:
-        image: ebispot/ols-solr:latest
+        image: ebispot/ols-solr:0.0.4
         environment:
           - SOLR_HOME=/mnt/solr-config
         ports:
@@ -11,7 +11,7 @@ services:
           - ./solr-config:/mnt/solr-config
         command: ["-Dsolr.solr.home=/mnt/solr-config", "-Dsolr.data.dir=/var/solr", "-Dsolr.log=/var/solr/logs", "-f"]
     neo4j:
-        image: neo4j:3.1.1
+        image: neo4j:4.4
         environment:
             # - NEO4J_HEAP_MEMORY=10g # configure the heap memory
             # - NEO4J_dbms_memory_heap_maxSize=8g

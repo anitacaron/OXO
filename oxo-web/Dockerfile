@@ -1,5 +1,5 @@
 
-FROM maven:3.6-jdk-8 AS build
+FROM maven:3.8.5-jdk-8 AS build
 RUN mkdir /opt/oxo
 COPY pom.xml /opt/oxo/pom.xml
 COPY oxo-web /opt/oxo/oxo-web
