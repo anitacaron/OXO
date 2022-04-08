@@ -13,3 +13,5 @@ oxo-web/src/main/resources/static
 .settings
 data/solr/data/*
 .vscode
+oxo-neo4j-import
+config/

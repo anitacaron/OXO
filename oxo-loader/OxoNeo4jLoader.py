@@ -7,7 +7,7 @@ __author__ = "jupp"
 __license__ = "Apache 2.0"
 __date__ = "03/03/2018"
 
-from neo4j.v1 import GraphDatabase, basic_auth
+from neo4j import GraphDatabase, basic_auth
 from configparser import ConfigParser
 from optparse import OptionParser
 

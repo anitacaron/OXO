@@ -1,4 +1,5 @@
-FROM python:3-alpine
+FROM python:3.9.3-alpine
+
 
 ADD oxo-loader /opt/oxo-loader
 

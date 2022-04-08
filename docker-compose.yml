@@ -22,7 +22,7 @@ services:
           - 7474:7474
           - 7687:7687
         volumes:
-          - oxo-neo4j-import:/var/lib/neo4j/import
+          - ./oxo-neo4j-import:/var/lib/neo4j/import
           - oxo-neo4j-data:/data
     oxo-web:
         build:
@@ -45,12 +45,6 @@ services:
         - 8080:8080
 volumes:
     oxo-neo4j-import:
-        external: true
     oxo-neo4j-data:
-        external: true
-    oxo-mongo-data:
-        external: true
     oxo-solr-data:
-        external: true
     oxo-hsqldb:
-        external: true
