@@ -12,10 +12,10 @@ DOCKERCOMPOSE=${DOCKERCOMPOSE:-docker-compose}
 VOLUMEROOT=${VOLUMEROOT:-$(pwd)}
 
 # The location of the configuration directory (by default same directory as where the volumes are persisted)
-OXOCONFIGDIR=${CONFIGDIR:-$VOLUMEROOT/config}
+OXOCONFIGDIR=${CONFIGDIR:-$VOLUMEROOT/config/}
 
 # The name of the network, as defined by docker-compose
-NETWORK=${NETWORK:-host}
+NETWORK=${NETWORK:-customolsnet}
 
 ##############################################
 ############ Docker Configuration ############
@@ -25,12 +25,10 @@ DOCKERRUN=$DOCKERCMD" run"
 
 ############ Volumes #########################
 NEO4J_IMPORT_DIR=$VOLUMEROOT/oxo-neo4j-import
-# The location of the configuration directory (by default same directory as where the volumes are persisted)
-OXOCONFIGDIR=${CONFIGDIR:-$VOLUMEROOT/config/}
 
 
 ############ Images ###########################
-EBISPOT_OXOLOADER=ihcc/oxo-loader
+EBISPOT_OXOLOADER=ihcc/oxo-loader:0.0.2
 EBISPOT_OXOINDEXER=ihcc/oxo-indexer:0.0.5
 
 ######## Solr Services ########################
@@ -77,7 +75,7 @@ echo "INFO: OXO - Load datasets... ($SECONDS sec)"
 $DOCKERRUN -v "$OXOCONFIGDIR"/config.ini:/mnt/config.ini \
     -v "$NEO4J_IMPORT_DIR":/var/lib/neo4j/import \
     --network "$NETWORK" \
-    -it "$EBISPOT_OXOLOADER" python /opt/oxo-loader/OxoNeo4jLoader.py -c /mnt/config.ini -W -d datasources.csv
+    -it "$EBISPOT_OXOLOADER" python /opt/oxo-loader/OxoNeo4jLoader.py -c /mnt/config.ini -d datasources.csv
 
 # 8. This process extracts the xref mappings from OLS and exports them into OxO format.
 # The result of this process are the two files terms.csv and mappings.csv

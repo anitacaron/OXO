@@ -19,7 +19,7 @@ class Neo4jOxOLoader:
         # else:
         #     config = ConfigParser()
         #     config.read(sys.argv[1])
-
+        print("changed 2")
         parser = OptionParser()
         parser.add_option("-d","--datasources",  help="load the datasource file")
         parser.add_option("-t","--terms", help="load the term file")
@@ -40,12 +40,11 @@ class Neo4jOxOLoader:
         neoUser = config.get("Basics", "neoUser")
         neoPass = config.get("Basics", "neoPass")
 
-
-        driver = GraphDatabase.driver(uri, auth=basic_auth(neoUser, neoPass))
+        driver = GraphDatabase.driver(uri, auth=basic_auth(neoUser, neoPass), encrypted=False)
         self.session = driver.session()
 
-        self.session.run("CREATE CONSTRAINT ON (i:Term) ASSERT i.curie IS UNIQUE")
-        self.session.run("CREATE CONSTRAINT ON (i:Datasource) ASSERT i.prefix IS UNIQUE")
+        # self.session.run("CREATE CONSTRAINT ON (i:Term) ASSERT i.curie IS UNIQUE")
+        # self.session.run("CREATE CONSTRAINT ON (i:Datasource) ASSERT i.prefix IS UNIQUE")
 
         if options.wipe:
             while self.deleteMappings() > 0:

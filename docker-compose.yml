@@ -48,3 +48,6 @@ volumes:
     oxo-neo4j-data:
     oxo-solr-data:
     oxo-hsqldb:
+networks:
+  default:
+    name: customolsnet

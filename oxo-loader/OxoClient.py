@@ -208,7 +208,7 @@ class OXO:
 
 
     def getOxODatasets(self):
-        url = self.oxoUrl + "/api/datasources?size=4000"
+        url = self.oxoUrl + "/api/datasources"
         print("querying " + url)
         reply = urllib.request.urlopen(url)
         answer = json.load(reply)
