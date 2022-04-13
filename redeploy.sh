@@ -25,11 +25,13 @@ DOCKERRUN=$DOCKERCMD" run"
 
 ############ Volumes #########################
 NEO4J_IMPORT_DIR=$VOLUMEROOT/oxo-neo4j-import
-
+OLS_NEO4J_DATA=$VOLUMEROOT/ols-neo4j-data
+OLS_NEO4J_DOWNLOADS=$VOLUMEROOT/ols-downloads
 
 ############ Images ###########################
 EBISPOT_OXOLOADER=ihcc/oxo-loader:0.0.2
 EBISPOT_OXOINDEXER=ihcc/oxo-indexer:0.0.5
+EBISPOT_OLSCONFIGIMPORTER=ebispot/ols-config-importer:stable
 
 ######## Solr Services ########################
 OXO_SOLR=http://oxo-solr:8983/solr
@@ -51,6 +53,25 @@ mkdir -vp "$NEO4J_IMPORT_DIR"
 # https://docs.docker.com/compose/reference/down/
 echo "INFO: Shutting any running services down... ($SECONDS sec)"
 $DOCKERCOMPOSE down -v
+
+# 2. Start Mongo and solr for OLS which are required for the data loading and indexing.
+echo "INFO: Starting up Mongo and Solr services... ($SECONDS sec)"
+$DOCKERCOMPOSE up -d ols-solr ols-mongo
+# We are sleeping a bit to give the solr and mongo instances time to properly start up before running the data pipeline.
+sleep 30
+
+# 3. We are importing the ols-configuration file, which contains the list of ontologies to be loaded, as well their locations.
+echo "INFO: OLS - Importing config... ($SECONDS sec)"
+$DOCKERRUN --network "$NETWORK" -v "$OLSCONFIGDIR":/config \
+           -e spring.data.mongodb.host=ols-mongo "$EBISPOT_OLSCONFIGIMPORTER"
+
+# 4. This step indexes the OLS using the list of ontologies configured in the previous step.
+# you could mount  here to inspect the downloaded ontologies
+# Tried this because of some irrelevant noise in the DEBUG level log, but failed. -v $OLSCONFIGDIR/simplelogger.properties:/simplelogger.properties -e JAVA_OPTS=-Dlog4j.configuration=file:/simplelogger.properties
+echo "INFO: OLS - Indexing OLS... ($SECONDS sec)"
+$DOCKERRUN --network "$NETWORK" -v "$OLS_NEO4J_DATA":/mnt/neo4j -v "$OLS_NEO4J_DOWNLOADS":/mnt/downloads \
+           -e spring.data.mongodb.host=ols-mongo \
+           -e spring.data.solr.host="$OLS_SOLR" "$EBISPOT_OLSINDEXER"
 
 # 5. Now, we start the remaining services. It is important that ols-web is not running at indexing time. 
 # This is a shortcoming in the OLS archticture and will likely be solved in future versions
