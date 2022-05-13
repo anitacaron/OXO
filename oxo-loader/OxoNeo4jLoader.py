@@ -7,9 +7,12 @@ __author__ = "jupp"
 __license__ = "Apache 2.0"
 __date__ = "03/03/2018"
 
+import re
 from neo4j import GraphDatabase, basic_auth
 from configparser import ConfigParser
 from optparse import OptionParser
+import pandas as pd
+import yaml
 
 class Neo4jOxOLoader:
     def __init__(self):
@@ -21,9 +24,9 @@ class Neo4jOxOLoader:
         #     config.read(sys.argv[1])
 
         parser = OptionParser()
-        parser.add_option("-d","--datasources",  help="load the datasource file")
-        parser.add_option("-t","--terms", help="load the term file")
-        parser.add_option("-m","--mappings", help="load the mapping file")
+        parser.add_option("-s","--sssom", help="load the sssom file")
+        parser.add_option("-p","--preprocess", help="preprocess the sssom file")
+        parser.add_option("-m", "--metadata", help="file path to save metadata from sssom table")
         parser.add_option("-W","--wipe", action="store_true", dest="wipe", help="wipe the neo4j database")
         parser.add_option("-c","--config", help="config file", default="config.ini")
 
@@ -63,12 +66,12 @@ class Neo4jOxOLoader:
                 print("Still deleting...")
             print("Datasources deleted!")
 
-        if options.datasources:
-            self.load_datasources(options.datasources)
-        if options.terms:
-            self.load_terms(options.terms)
-        if options.mappings:
-            self.load_mappings(options.mappings)
+        if options.preprocess:
+          self.preprocess(options.preprocess, options.metadata)
+        if options.sssom:
+            self.load_datasources(options.sssom)
+            self.load_terms(options.sssom)
+            self.load_mappings(options.sssom)
 
 
     def deleteMappings(self):
@@ -147,6 +150,48 @@ class Neo4jOxOLoader:
         # WITH d, line
         #SET d.preferredPrefix = line.prefix, d.name = line.title, d.description = line.description, d.versionInfo = line.versionInfo, d.idorgNamespace = line.idorgNamespace, d.licence = line.licence, d.sourceType = line.sourceType, d.alternatePrefix = split(line.alternatePrefixes,",")
         self.session.run(load_datasources_cypher)
+
+    def preprocess(self, mapping_path, metadata_path):
+      sssom_metadata = self._read_metadata_from_table(mapping_path)
+      
+      df = pd.read_csv(mapping_path, sep='\t', comment='#')
+
+      df = self.expand_curie(df, sssom_metadata)
+
+      df.to_csv(mapping_path, sep='\t', index=False)
+
+      with open(metadata_path, 'w') as file:
+        yaml.dump(sssom_metadata, file)
+      
+    def expand_curie(self, df, sssom_metadata):
+      if 'curie_map' in sssom_metadata:
+        df['subject_uri'] = None
+        df['object_uri'] = None
+        for _, row in df.iterrows():
+          subject = row['subject_id'].split(":")
+          object_ = row['object_id'].split(":")
+          for k, v in sssom_metadata['curie_map'].items():
+            if sssom_metadata["curie_map"][k] == subject[0]:
+              df['subject_uri'] = sssom_metadata["curie_map"][subject[0]] + subject[1]
+              df['object_uri'] = sssom_metadata["curie_map"][object_[0]] + object_[1]
+        
+        return df
+      else:
+        return df
+
+    def _read_metadata_from_table(self, path):
+      with open(path) as file:
+          yamlstr = ""
+          for line in file:
+              if line.startswith("#"):
+                  yamlstr += re.sub("^#", "", line)
+              else:
+                  break
+
+      if yamlstr:
+        meta = yaml.safe_load(yamlstr)
+        return meta
+      return {}
       
 
 if __name__ == '__main__':
