@@ -12,6 +12,7 @@ from neo4j import GraphDatabase, basic_auth
 from configparser import ConfigParser
 from optparse import OptionParser
 import pandas as pd
+from urllib.request import urlopen
 import yaml
 
 class Neo4jOxOLoader:
@@ -102,10 +103,12 @@ class Neo4jOxOLoader:
             FIELDTERMINATOR '\t'
             WITH row
             MERGE (t1:Term { curie: row.subject_id})
+            SET t1.id = row.subject_identifier, t1.uri = row.subject_uri
             SET t1.label = CASE trim(row.subject_label) WHEN "" THEN null ELSE row.subject_label END
             SET t1.category = CASE trim(row.subject_category) WHEN "" THEN null ELSE row.subject_category END
             WITH row
             MERGE (t2:Term { curie: row.object_id})
+            SET t2.id = row.object_identifier, t2.uri = row.object_uri
             SET t2.label = CASE trim(row.object_label) WHEN "" THEN null ELSE row.object_label END
             SET t2.category = CASE trim(row.object_category) WHEN "" THEN null ELSE row.object_category END
         """
@@ -131,8 +134,7 @@ class Neo4jOxOLoader:
             FIELDTERMINATOR '\t'
             WITH row
             MATCH (subject:Term { curie : row.subject_id}), (object:Term { curie: row.object_id})
-            MERGE (subject)-[m:MAPPING { predicate: row.predicate_id, matchType: row.match_type, mappingTool: row.mapping_tool, confidence: row.confidence, matchCategory: row.match_category}]->(object)
-            SET m.matchString = CASE trim(row.match_string) WHEN "" THEN null ELSE row.match_string END
+            MERGE (subject)-[m:MAPPING { sourcePrefix: row.subject_source, datasource: "", sourceType: "ONTOLOGY", scope: row.predicate_id, date: ""}]->(object)
           """
 
         result = self.session.run(load_mappings_cypher)
@@ -144,19 +146,26 @@ class Neo4jOxOLoader:
             LOAD CSV WITH HEADERS FROM 'file:///"""+datasources+"""' AS row
             FIELDTERMINATOR '\t'
             WITH row
-            MERGE (d1:Datasource {prefix : row.subject_source})
-            MERGE (d2:Datasource {prefix : row.object_source})
+            MERGE (d1:Datasource {prefix: row.subject_source})
+            MERGE (d2:Datasource {prefix: row.object_source})
+            WITH d1, d2, row
+            SET d1.preferredPrefix = row.subject_source, d1.name = "", d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = row.subject_source
+            SET d2.preferredPrefix = row.subject_source, d2.name = "", d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.subject_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = row.subject_source
         """
         # WITH d, line
         #SET d.preferredPrefix = line.prefix, d.name = line.title, d.description = line.description, d.versionInfo = line.versionInfo, d.idorgNamespace = line.idorgNamespace, d.licence = line.licence, d.sourceType = line.sourceType, d.alternatePrefix = split(line.alternatePrefixes,",")
         self.session.run(load_datasources_cypher)
 
     def preprocess(self, mapping_path, metadata_path):
-      sssom_metadata = self._read_metadata_from_table(mapping_path)
+      sssom = 'https://raw.githubusercontent.com/EnvironmentOntology/environmental-exposure-ontology/master/mappings/ecto.sssom.tsv'
       
-      df = pd.read_csv(mapping_path, sep='\t', comment='#')
+      sssom_metadata = self._read_metadata_from_table(sssom)
+      
+      df = pd.read_csv(sssom, sep='\t', comment='#')
 
       df = self.expand_curie(df, sssom_metadata)
+
+      df = self.add_id(df)
 
       df.to_csv(mapping_path, sep='\t', index=False)
 
@@ -167,31 +176,46 @@ class Neo4jOxOLoader:
       if 'curie_map' in sssom_metadata:
         df['subject_uri'] = None
         df['object_uri'] = None
-        for _, row in df.iterrows():
-          subject = row['subject_id'].split(":")
-          object_ = row['object_id'].split(":")
-          for k, v in sssom_metadata['curie_map'].items():
-            if sssom_metadata["curie_map"][k] == subject[0]:
-              df['subject_uri'] = sssom_metadata["curie_map"][subject[0]] + subject[1]
-              df['object_uri'] = sssom_metadata["curie_map"][object_[0]] + object_[1]
+        curie_map = sssom_metadata["curie_map"]
+        for i, row in df.iterrows():
+          sub = row['subject_id'].split(":")
+          obj = row['object_id'].split(":")
+        
+          if curie_map.get(sub[0]):
+            df.loc[i,'subject_uri'] = sssom_metadata["curie_map"][sub[0]] + sub[1]
+          if curie_map.get(obj[0]):
+            df.loc[i, 'object_uri'] = sssom_metadata["curie_map"][obj[0]] + obj[1]
         
         return df
       else:
         return df
 
     def _read_metadata_from_table(self, path):
-      with open(path) as file:
-          yamlstr = ""
-          for line in file:
-              if line.startswith("#"):
-                  yamlstr += re.sub("^#", "", line)
-              else:
-                  break
+      response = urlopen(path)
+      yamlstr = ""
+      for lin in response:
+          line = lin.decode("utf-8")
+          if line.startswith("#"):
+              yamlstr += re.sub("^#", "", line)
+          else:
+              break
 
       if yamlstr:
         meta = yaml.safe_load(yamlstr)
         return meta
       return {}
+
+    def add_id(self, df):
+      df['subject_identifier'] = ""
+      df['object_identifier'] = ""
+
+      for i, row in df.iterrows():
+        df.loc[i, 'subject_identifier'] = self.get_id_from_curie(row['subject_id'])
+        df.loc[i, 'object_identifier'] = self.get_id_from_curie(row['object_id'])
+      return df
+    
+    def get_id_from_curie(self, curie):
+      return curie.split(':')[1]
       
 
 if __name__ == '__main__':
