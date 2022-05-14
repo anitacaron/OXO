@@ -40,6 +40,12 @@ OXO_SOLR=http://solr:8983/solr
 ############ Pipeline ########################
 ##############################################
 
+# We decided to expose the neo4j import directory for OxO as a local directory, because it is very useful for debugging 
+# (checking the generated mapping tables etc). All other volumes are created and managed by docker-compose
+echo "WARNING: Removing all existing indexed data"
+rm -rfv "$NEO4J_IMPORT_DIR" 
+mkdir -vp "$NEO4J_IMPORT_DIR"
+
 
 # 1. Make sure the OXO instances are currently not running, or if so, shut them down.
 # Note that during development, we are using the `-v` option to ensure that unused volumes are cleared as well.
