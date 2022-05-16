@@ -1,7 +1,7 @@
 package uk.ac.ebi.spot.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.neo4j.ogm.annotation.GraphId;
+import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Property;
 import org.neo4j.ogm.annotation.Relationship;
@@ -18,7 +18,7 @@ import java.io.Serializable;
 public class Term implements Serializable {
 
 
-    @GraphId
+    @Id
     @JsonIgnore
     private Long id;
 
