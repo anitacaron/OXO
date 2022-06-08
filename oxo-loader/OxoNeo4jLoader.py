@@ -47,8 +47,8 @@ class Neo4jOxOLoader:
         driver = GraphDatabase.driver(uri, auth=basic_auth(neo_user, neo_pass), encrypted=False)
         self.session = driver.session()
 
-        self.session.run("CREATE CONSTRAINT IF NOT EXISTS ON (i:Term) ASSERT i.curie IS UNIQUE")
-        self.session.run("CREATE CONSTRAINT IF NOT EXISTS ON (i:Datasource) ASSERT i.prefix IS UNIQUE")
+        self.session.run("CREATE CONSTRAINT ON (i:Term) ASSERT i.curie IS UNIQUE")
+        self.session.run("CREATE CONSTRAINT ON (i:Datasource) ASSERT i.prefix IS UNIQUE")
 
         if options.wipe:
             while self.deleteMappings() > 0:
@@ -149,8 +149,8 @@ class Neo4jOxOLoader:
             MERGE (d1:Datasource {prefix: row.subject_source})
             MERGE (d2:Datasource {prefix: row.object_source})
             WITH d1, d2, row
-            SET d1.preferredPrefix = row.subject_source, d1.name = "", d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = row.subject_source
-            SET d2.preferredPrefix = row.subject_source, d2.name = "", d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.subject_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = row.subject_source
+            SET d1.preferredPrefix = row.subject_source, d1.name = "", d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = split(row.subject_source,",")
+            SET d2.preferredPrefix = row.object_source, d2.name = "", d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.object_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = split(row.object_source, ",")
         """
         # WITH d, line
         #SET d.preferredPrefix = line.prefix, d.name = line.title, d.description = line.description, d.versionInfo = line.versionInfo, d.idorgNamespace = line.idorgNamespace, d.licence = line.licence, d.sourceType = line.sourceType, d.alternatePrefix = split(line.alternatePrefixes,",")
