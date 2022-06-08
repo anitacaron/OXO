@@ -14,6 +14,7 @@ from optparse import OptionParser
 import pandas as pd
 from urllib.request import urlopen
 import yaml
+from datetime import date
 
 class Neo4jOxOLoader:
     def __init__(self):
@@ -134,7 +135,7 @@ class Neo4jOxOLoader:
             FIELDTERMINATOR '\t'
             WITH row
             MATCH (subject:Term { curie : row.subject_id}), (object:Term { curie: row.object_id})
-            MERGE (subject)-[m:MAPPING { sourcePrefix: row.subject_source, datasource: "", sourceType: "ONTOLOGY", scope: row.predicate_id, date: ""}]->(object)
+            MERGE (subject)-[m:MAPPING { sourcePrefix: row.subject_source, datasource: "", sourceType: "ONTOLOGY", scope: row.predicate_id, date: row.mapping_date}]->(object)
           """
 
         result = self.session.run(load_mappings_cypher)
@@ -166,6 +167,8 @@ class Neo4jOxOLoader:
       df = self.expand_curie(df, sssom_metadata)
 
       df = self.add_id(df)
+
+      df = self.add_mapping_date(df, sssom_metadata)
 
       df.to_csv(mapping_path, sep='\t', index=False)
 
@@ -216,6 +219,13 @@ class Neo4jOxOLoader:
     
     def get_id_from_curie(self, curie):
       return curie.split(':')[1]
+
+    def add_mapping_date(self, df, sssom_metadata):
+      if 'mapping_date' in sssom_metadata:
+        df['mapping_date'] = sssom_metadata['mapping_date']
+      else:
+        df['mapping_date'] = date(2000, 1, 1).isoformat()
+      return df
       
 
 if __name__ == '__main__':
