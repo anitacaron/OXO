@@ -1,6 +1,6 @@
 package uk.ac.ebi.spot.service;
 
-import com.opencsv.CSVWriter;
+import au.com.bytecode.opencsv.CSVWriter;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;

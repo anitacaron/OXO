@@ -15,7 +15,7 @@ import java.util.Date;
 @RelationshipEntity(type = "MAPPING")
 public class Mapping {
 
-    @Id
+    @GraphId
     private Long mappingId;
 
     @Convert(DatasourceConverter.class)
