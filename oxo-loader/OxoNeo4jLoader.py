@@ -15,6 +15,7 @@ import pandas as pd
 from urllib.request import urlopen
 import yaml
 from datetime import date
+import json
 
 class Neo4jOxOLoader:
     def __init__(self):
@@ -135,7 +136,7 @@ class Neo4jOxOLoader:
             FIELDTERMINATOR '\t'
             WITH row
             MATCH (subject:Term { curie : row.subject_id}), (object:Term { curie: row.object_id})
-            MERGE (subject)-[m:MAPPING { sourcePrefix: row.subject_source, datasource: "", sourceType: "ONTOLOGY", scope: row.predicate_id, date: row.mapping_date}]->(object)
+            MERGE (subject)-[m:MAPPING { sourcePrefix: row.subject_source, datasource: row.datasource, sourceType: "ONTOLOGY", scope: row.scope, date: row.mapping_date}]->(object)
           """
 
         result = self.session.run(load_mappings_cypher)
@@ -150,8 +151,8 @@ class Neo4jOxOLoader:
             MERGE (d1:Datasource {prefix: row.subject_source})
             MERGE (d2:Datasource {prefix: row.object_source})
             WITH d1, d2, row
-            SET d1.preferredPrefix = row.subject_source, d1.name = "", d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = split(row.subject_source,",")
-            SET d2.preferredPrefix = row.object_source, d2.name = "", d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.object_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = split(row.object_source, ",")
+            SET d1.preferredPrefix = row.subject_source, d1.name = row.subject_source, d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = split(row.subject_source,",")
+            SET d2.preferredPrefix = row.object_source, d2.name = row.subject_source, d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.object_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = split(row.object_source, ",")
         """
         # WITH d, line
         #SET d.preferredPrefix = line.prefix, d.name = line.title, d.description = line.description, d.versionInfo = line.versionInfo, d.idorgNamespace = line.idorgNamespace, d.licence = line.licence, d.sourceType = line.sourceType, d.alternatePrefix = split(line.alternatePrefixes,",")
@@ -169,6 +170,10 @@ class Neo4jOxOLoader:
       df = self.add_id(df)
 
       df = self.add_mapping_date(df, sssom_metadata)
+
+      df = self.add_datasource(df)
+
+      df = self.mapping_scope(df)
 
       df.to_csv(mapping_path, sep='\t', index=False)
 
@@ -227,6 +232,38 @@ class Neo4jOxOLoader:
         df['mapping_date'] = date(2000, 1, 1).isoformat()
       return df
       
+    def add_datasource(self, df):
+      df["datasource"] = None
+      for i, row in df.iterrows():
+        datasource = {
+          "prefix": None,
+          "name": None,
+          "source": None,
+          "idorgNamespace": None,
+          "alternatePrefix": None,
+          "licence": None,
+          "versionInfo": None,
+          "preferredPrefix": None
+        }
+        datasource["prefix"] = row["subject_source"]
+        datasource["name"] = row["subject_source"]
+        datasource["source"] = "ONTOLOGY"
+        datasource["alternatePrefix"] = [row["subject_source"]]
+        datasource["preferredPrefix"] = row["subject_source"]
+
+        df["datasource"].iloc[i] = json.dumps(datasource)
+
+      return df
+
+    def mapping_scope(self, df):
+      SCOPE = {
+        "owl:equivalentClass": "EXACT"
+      }
+      df["scope"] = None
+      
+      for key, value in SCOPE.items():
+        df.loc[(df["predicate_id"] == key), 'scope'] = SCOPE[key]
+      return df
 
 if __name__ == '__main__':
     Neo4jOxOLoader()
