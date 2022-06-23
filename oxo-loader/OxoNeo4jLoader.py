@@ -119,7 +119,7 @@ class Neo4jOxOLoader:
           USING PERIODIC COMMIT 10000 LOAD CSV WITH HEADERS FROM 'file:///"""+terms+"""' AS row
           FIELDTERMINATOR '\t'
           MATCH (t1:Term { curie: row.subject_id}), (t2:Term { curie: row.object_id})
-          MATCH (d1:Datasource { prefix: row.subject_source}), (d2:Datasource { prefix: row.object_source})
+          MATCH (d1:Datasource { prefix: toLower(row.subject_source)}), (d2:Datasource { prefix: toLower(row.object_source)})
           MERGE (t1)-[:HAS_SOURCE]->(d1)
           MERGE (t2)-[:HAS_SOURCE]->(d2)
         """
@@ -148,11 +148,11 @@ class Neo4jOxOLoader:
             LOAD CSV WITH HEADERS FROM 'file:///"""+datasources+"""' AS row
             FIELDTERMINATOR '\t'
             WITH row
-            MERGE (d1:Datasource {prefix: row.subject_source})
-            MERGE (d2:Datasource {prefix: row.object_source})
+            MERGE (d1:Datasource {prefix: toLower(row.subject_source)})
+            MERGE (d2:Datasource {prefix: toLower(row.object_source)})
             WITH d1, d2, row
             SET d1.preferredPrefix = row.subject_source, d1.name = row.subject_source, d1.description = "", d1.versionInfo = "", d1.idorgNamespace = toLower(row.subject_source), d1.licence = "", d1.sourceType = "ONTOLOGY", d1.alternatePrefix = split(row.subject_source,",")
-            SET d2.preferredPrefix = row.object_source, d2.name = row.subject_source, d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.object_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = split(row.object_source, ",")
+            SET d2.preferredPrefix = row.object_source, d2.name = row.object_source, d2.description = "", d2.versionInfo = "", d2.idorgNamespace = toLower(row.object_source), d2.licence = "", d2.sourceType = "ONTOLOGY", d2.alternatePrefix = split(row.object_source, ",")
         """
         # WITH d, line
         #SET d.preferredPrefix = line.prefix, d.name = line.title, d.description = line.description, d.versionInfo = line.versionInfo, d.idorgNamespace = line.idorgNamespace, d.licence = line.licence, d.sourceType = line.sourceType, d.alternatePrefix = split(line.alternatePrefixes,",")
