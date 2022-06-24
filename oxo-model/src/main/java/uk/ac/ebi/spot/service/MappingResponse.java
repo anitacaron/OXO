@@ -2,6 +2,8 @@ package uk.ac.ebi.spot.service;
 
 import java.util.Collection;
 
+import uk.ac.ebi.spot.model.Scope;
+
 /**
  * @author Simon Jupp
  * @since 30/08/2016
@@ -14,16 +16,18 @@ public class MappingResponse {
     private Collection<String> sourcePrefixes;
     private String targetPrefix;
     private int distance;
+    private Scope scope;
 
     public MappingResponse() {
     }
 
-    public MappingResponse(String curie, String label, Collection<String> sourcePrefixes, String targetPrefix, int distance) {
+    public MappingResponse(String curie, String label, Collection<String> sourcePrefixes, String targetPrefix, int distance, Scope scope) {
         this.curie = curie;
         this.label = label;
         this.sourcePrefixes = sourcePrefixes;
         this.targetPrefix = targetPrefix;
         this.distance = distance;
+        this.scope = scope;
     }
 
     public String getCurie() {
@@ -64,6 +68,14 @@ public class MappingResponse {
 
     public void setDistance(int distance) {
         this.distance = distance;
+    }
+    
+    public Scope getScope() {
+        return this.scope;
+    }
+  
+    public void setScope(Scope scope) {
+        this.scope = scope;
     }
 }
 

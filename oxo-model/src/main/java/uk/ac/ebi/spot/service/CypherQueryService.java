@@ -9,6 +9,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.neo4j.template.Neo4jOperations;
 import org.springframework.stereotype.Service;
+
+import uk.ac.ebi.spot.model.Scope;
 import uk.ac.ebi.spot.util.MappingDistance;
 
 import java.util.*;
@@ -44,14 +46,14 @@ public class CypherQueryService implements MappingQueryService {
     private static String MAPPING_BY_DATASOURCE_QUERY_PART2= "WITH ft, fd, tt, td\n" +
             "MATCH path =  (ft)-[m:MAPPING*1..%s]-(tt) \n" +
             "WHERE fd <> td\n" +
-            "WITH ft, tt, td, length(path) as length, extract ( r in m |  r.sourcePrefix) as edges\n";
+            "WITH ft, tt, td, length(path) as length, extract ( r in m |  r.sourcePrefix) as edges, extract ( r in m | r.scope) as precisions\n";
 
 
-    private static String MAPPING_BY_DATASOURCE_QUERY_PART3= "UNWIND edges as edge\n" +
-            "WITH ft, tt, length,  td.prefix as targetPrefix, collect (distinct edge) as edgeSource ORDER BY ft.curie, length\n" +  // order to get shortest path first
-            "WITH ft, tt, collect ( [length, targetPrefix, edgeSource])[0] as shortest\n" +   // move forward with only shortest path
+    private static String MAPPING_BY_DATASOURCE_QUERY_PART3= "UNWIND edges as edge\nUNWIND precisions as precision\n" +
+            "WITH ft, tt, length,  td.prefix as targetPrefix, collect (distinct edge) as edgeSource, collect (distinct precision) as edgePrecision ORDER BY ft.curie, length\n" +  // order to get shortest path first
+            "WITH ft, tt, collect ( [length, targetPrefix, edgeSource, edgePrecision])[0] as shortest\n" +   // move forward with only shortest path
 //            "UNWIND tmp as shortest\n" +
-            "RETURN distinct (ft.curie) as fromCurie, ft.label as fromLabel, tt.curie as curie, tt.label as label, shortest[0] as dist, shortest[1] as datasources, shortest[2] as mappingSources";
+            "RETURN distinct (ft.curie) as fromCurie, ft.label as fromLabel, tt.curie as curie, tt.label as label, shortest[0] as dist, shortest[1] as datasources, shortest[2] as mappingSources, shortest[3][0] as edgePrecision";
 //            "RETURN distinct(ft.curie) as fromCurie, ft.label as fromLabel, tt.curie as curie, tt.label as label, MIN(length) as dist, td.prefix as datasources, collect (distinct source1) as mappingSources ORDER BY fromCurie";
 
     private String getMappingQuery2 (String id, String fromDatasource, int distance, Collection<String> sourcePrefix, Collection<String> targetPrefix) {
@@ -124,6 +126,7 @@ public class CypherQueryService implements MappingQueryService {
             response.setSourcePrefixes( Arrays.asList((String[]) row.get("mappingSources")));
             response.setTargetPrefix( (String) row.get("datasources"));
             response.setDistance(Integer.parseInt(row.get("dist").toString()));
+            response.setScope(Scope.valueOf((String) row.get("edgePrecision")));
             target.add(response);
             searchResult.setCurie((String) row.get("fromCurie"));
             searchResult.setLabel((String) row.get("fromLabel"));

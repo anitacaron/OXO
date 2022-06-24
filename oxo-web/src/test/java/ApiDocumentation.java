@@ -353,7 +353,7 @@ public class ApiDocumentation {
 
         MappingSearchRequest searchRequest = new MappingSearchRequest(inputIds, Collections.singleton("MONDO"), Collections.singleton("MONDO"));
 
-        MappingResponse mappingResponse = new MappingResponse("MONDO:0004992","cancer", Arrays.asList("mondo", "efo"), "MONDO", 2 );
+        MappingResponse mappingResponse = new MappingResponse("MONDO:0004992","cancer", Arrays.asList("mondo", "efo"), "MONDO", 2 , Scope.EXACT);
         SearchResult result = new SearchResult("DOID:162", null, "DOID:162", "cancer", Lists.newArrayList(mappingResponse));
         Page<SearchResult> resultPage = new PageImpl<SearchResult>(Collections.singletonList(result), new PageRequest(0, 20), 20);
 
